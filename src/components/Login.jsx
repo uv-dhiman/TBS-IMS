@@ -64,7 +64,7 @@ const Login = ({ onLoginSuccess }) => {
           <div style={styles.quoteBox}>
             <h1 style={styles.mainHeading}>Master the art of baking</h1>
             <p style={styles.subHeading}>
-              From sourdough fundamentals to advanced pastry — manage your courses, 
+               manage your courses, 
               track attendance, and access exclusive recipes all in one place.
             </p>
           </div>
