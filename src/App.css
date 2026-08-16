@@ -1,0 +1,180 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.login-page {
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background: #151515;
+}
+
+.login-background {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(15, 15, 15, 0.95),
+      rgba(15, 15, 15, 0.72),
+      rgba(15, 15, 15, 0.35)
+    ),
+    url("https://images.unsplash.com/photo-1578985545062-69928b1d9587")
+    center / cover no-repeat;
+}
+
+.login-card {
+  position: relative;
+  z-index: 2;
+  width: 430px;
+  padding: 35px 40px;
+  border-radius: 20px;
+
+  background: rgba(25, 25, 25, 0.92);
+  backdrop-filter: blur(10px);
+
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+  color: white;
+}
+
+.tbs-logo {
+  display: block;
+  width: 135px;
+  height: 135px;
+  object-fit: contain;
+  border-radius: 50%;
+  margin: 0 auto 18px;
+}
+
+.login-card h1 {
+  text-align: center;
+  font-size: 30px;
+  margin-bottom: 5px;
+}
+
+.subtitle {
+  text-align: center;
+  color: #ffbd17;
+  font-size: 17px;
+  margin-bottom: 25px;
+  font-weight: 600;
+}
+
+.login-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 25px;
+}
+
+.login-tabs button {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+
+  background: #333;
+  color: #ddd;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.login-tabs button.active {
+  background: #ffb800;
+  color: #171717;
+}
+
+form label {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 7px;
+  color: #eee;
+}
+
+form input[type="text"],
+form input[type="password"] {
+  width: 100%;
+  padding: 14px 15px;
+  margin-bottom: 18px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #fff;
+  color: #222;
+
+  font-size: 15px;
+  outline: none;
+}
+
+form input:focus {
+  box-shadow: 0 0 0 2px #ffb800;
+}
+
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+  font-size: 13px;
+}
+
+.remember {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  margin: 0 !important;
+}
+
+.remember input {
+  width: auto;
+  margin: 0;
+}
+
+.login-options a {
+  color: #ffca28;
+  text-decoration: none;
+}
+
+.login-button {
+  width: 100%;
+  padding: 14px;
+
+  border: none;
+  border-radius: 30px;
+
+  background: #ffb800;
+  color: #171717;
+
+  font-size: 16px;
+  font-weight: bold;
+
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.login-button:hover {
+  background: #ffc933;
+  transform: translateY(-1px);
+}
+
+.portal-footer {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+
+  margin-top: 25px;
+
+  color: #aaa;
+  font-size: 12px;
+}
