@@ -10,96 +10,44 @@ require('dotenv').config();
 
 const app = express();
 
-// 1. Manual CORS Headers (Preflight Fix)
+// CORS Bypass
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
   next();
 });
 
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-// 2. User Schema & Model
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  role: { type: String, default: 'staff' },
-  isPasswordSet: { type: Boolean, default: true },
-  isActive: { type: Boolean, default: true }
-}, { timestamps: true });
+// Models (Existing files import)
+const User = require('./models/User');
+const Student = require('./models/Student');
+const Inventory = require('./models/Inventory');
 
-const User = mongoose.models.User || mongoose.model('User', userSchema);
-
-// 3. Database Connection
+// Database Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://admin_ims:BakeIms2026@cluster0.u2x5ska.mongodb.net/bakeIMS?retryWrites=true&w=majority';
 
 mongoose.connect(MONGO_URI)
   .then(() => console.log('MongoDB Connected Successfully'))
-  .catch(err => console.error('MongoDB Connection Error:', err));
+  .catch(err => console.error('MongoDB Error:', err));
 
-// 4. Root Route
-app.get('/', (req, res) => {
-  res.json({ message: 'TBS IMS Backend is Running Live!' });
-});
+// 1. Health Route
+app.get('/', (req, res) => res.json({ message: 'TBS IMS Live' }));
 
-// 5. Admin Creator Route
-app.get('/api/setup-admin', async (req, res) => {
-  try {
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('Admin@123', salt);
-
-    await User.deleteMany({ email: 'admin@thebakingschool.com' });
-
-    const newAdmin = new User({
-      name: 'Super Admin',
-      email: 'admin@thebakingschool.com',
-      password: hashedPassword,
-      role: 'staff',
-      isPasswordSet: true,
-      isActive: true
-    });
-
-    await newAdmin.save();
-
-    res.json({
-      success: true,
-      message: 'Admin account created successfully!',
-      credentials: {
-        role: 'staff',
-        email: 'admin@thebakingschool.com',
-        password: 'Admin@123'
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// 6. Login Handler
+// 2. Auth / Login Route
 const handleLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email and password required' });
-    }
+    if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
 
-    const cleanEmail = email.toLowerCase().trim();
-    const user = await User.findOne({ email: cleanEmail });
-
-    if (!user) {
-      return res.status(400).json({ success: false, message: 'User not found' });
-    }
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) return res.status(400).json({ message: 'User not found' });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ success: false, message: 'Invalid password' });
-    }
+    if (!isMatch) return res.status(400).json({ message: 'Invalid password' });
 
     const token = jwt.sign(
       { id: user._id, role: user.role, email: user.email },
@@ -110,20 +58,62 @@ const handleLogin = async (req, res) => {
     res.json({
       success: true,
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role }
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error during login', error: err.message });
+    res.status(500).json({ message: 'Server login error', error: err.message });
   }
 };
-
 app.post('/api/auth/login', handleLogin);
 app.post('/api/login', handleLogin);
+
+// 3. Student Routes
+app.get('/api/students', async (req, res) => {
+  try {
+    const students = await Student.find().sort({ createdAt: -1 });
+    res.json(students);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.post('/api/students', async (req, res) => {
+  try {
+    const { name, email, phone, course, totalFee, initialPaidAmount, paidFee } = req.body;
+    const total = Number(totalFee) || 0;
+    const paid = Number(initialPaidAmount || paidFee) || 0;
+
+    const newStudent = new Student({
+      name,
+      email,
+      phone,
+      course,
+      totalFee: total,
+      paidFee: paid,
+      dueFee: total - paid
+    });
+
+    const saved = await newStudent.save();
+    res.status(201).json(saved);
+  } catch (err) {
+    res.status(500).json({ message: 'Error submitting admission', error: err.message });
+  }
+});
+
+app.put('/api/students/:id/fee', async (req, res) => {
+  try {
+    const { additionalAmount } = req.body;
+    const student = await Student.findById(req.params.id);
+    if (!student) return res.status(404).json({ message: 'Student not found' });
+
+    student.paidFee = (student.paidFee || 0) + Number(additionalAmount);
+    student.dueFee = (student.totalFee || 0) - student.paidFee;
+    await student.save();
+    res.json(student);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
