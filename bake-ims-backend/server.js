@@ -80,6 +80,11 @@ app.get('/api/students', async (req, res) => {
 app.post('/api/students', async (req, res) => {
   try {
     const { name, email, phone, course, totalFee, initialPaidAmount, paidFee } = req.body;
+    // Check if student already exists with same email or phone
+    const existing = await Student.findOne({ $or: [{ email: email.toLowerCase().trim() }, { phone }] });
+    if (existing) {
+      return res.status(400).json({ message: 'Student with this email or phone is already registered!' });
+    }
     const total = Number(totalFee) || 0;
     const paid = Number(initialPaidAmount || paidFee) || 0;
 
