@@ -1,5 +1,4 @@
 const dns = require('dns');
-// Set standard Google and Cloudflare DNS servers for reliable Atlas SRV resolution
 dns.setServers(['1.1.1.1', '8.8.8.8']);
 
 const express = require('express');
@@ -11,19 +10,21 @@ require('dotenv').config();
 
 const app = express();
 
-// Middlewares
- // Robust CORS setup for Vercel + OPTIONS preflight handling
+// 1. Manual CORS Headers (Preflight Fix)
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    return res.status(200).end();
   }
   next();
 });
-app.use(cors());
-// MongoDB User Schema & Model
+
+app.use(cors({ origin: '*' }));
+app.use(express.json());
+
+// 2. User Schema & Model
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -35,25 +36,24 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
-// MongoDB Atlas Connection
+// 3. Database Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://admin_ims:BakeIms2026@cluster0.u2x5ska.mongodb.net/bakeIMS?retryWrites=true&w=majority';
 
 mongoose.connect(MONGO_URI)
-  .then(() => console.log(' MongoDB Connected Successfully'))
-  .catch(err => console.error(' MongoDB Connection Error:', err));
+  .then(() => console.log('MongoDB Connected Successfully'))
+  .catch(err => console.error('MongoDB Connection Error:', err));
 
-// 1. Root Test Route
+// 4. Root Route
 app.get('/', (req, res) => {
   res.json({ message: 'TBS IMS Backend is Running Live!' });
 });
 
-// 2. Setup/Reset Admin Endpoint
+// 5. Admin Creator Route
 app.get('/api/setup-admin', async (req, res) => {
   try {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash('Admin@123', salt);
 
-    // Delete existing entry to avoid collision
     await User.deleteMany({ email: 'admin@thebakingschool.com' });
 
     const newAdmin = new User({
@@ -81,11 +81,10 @@ app.get('/api/setup-admin', async (req, res) => {
   }
 });
 
-// 3. Robust Login Route (Supports both /api/login and /api/auth/login)
+// 6. Login Handler
 const handleLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
-
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password required' });
     }
@@ -119,7 +118,6 @@ const handleLogin = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Login error:', err);
     res.status(500).json({ success: false, message: 'Server error during login', error: err.message });
   }
 };
@@ -127,8 +125,5 @@ const handleLogin = async (req, res) => {
 app.post('/api/auth/login', handleLogin);
 app.post('/api/login', handleLogin);
 
-// Server Listen
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

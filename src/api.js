@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'https://tbs-backend-hub4.onrender.com:5000/api',
+  baseURL: 'https://tbs-backend-hub4.onrender.com/api',
 });
 
 API.interceptors.request.use((req) => {
