@@ -143,24 +143,25 @@ app.get('/api/setup-admin', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash('Admin@123', salt);
 
-    let user = await User.findOne({ email: 'admin@thebakingschool.com' });
-    if (user) {
-      user.password = hashedPassword;
-      user.role = 'owner';
-      user.isPasswordSet = true;
-      await user.save();
-      return res.json({ success: true, message: 'Existing Admin password updated to Admin@123' });
-    }
+    // Delete existing test users to prevent role/password conflicts
+    await User.deleteMany({ email: 'admin@thebakingschool.com' });
 
-    const newAdmin = new User({
-      name: 'Owner Admin',
+    // Create Admin with staff role so frontend Staff button matches
+    const staffAdmin = new User({
+      name: 'Super Admin',
       email: 'admin@thebakingschool.com',
       password: hashedPassword,
-      role: 'owner',
-      isPasswordSet: true
+      role: 'staff',
+      isPasswordSet: true,
+      isActive: true
     });
-    await newAdmin.save();
-    res.json({ success: true, message: 'New Admin created with Admin@123' });
+
+    await staffAdmin.save();
+
+    res.json({
+      success: true,
+      message: 'Admin account created with role "staff" and password "Admin@123"!'
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
