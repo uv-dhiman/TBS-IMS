@@ -138,16 +138,19 @@ app.put('/api/students/:id/fee', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-// Live Admin Creator
 app.get('/api/setup-admin', async (req, res) => {
   try {
-    let user = await User.findOne({ email: 'admin@thebakingschool.com' });
-    if (user) {
-      return res.json({ success: true, message: 'Admin account already exists!' });
-    }
-
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash('Admin@123', salt);
+
+    let user = await User.findOne({ email: 'admin@thebakingschool.com' });
+    if (user) {
+      user.password = hashedPassword;
+      user.role = 'owner';
+      user.isPasswordSet = true;
+      await user.save();
+      return res.json({ success: true, message: 'Existing Admin password updated to Admin@123' });
+    }
 
     const newAdmin = new User({
       name: 'Owner Admin',
@@ -156,14 +159,8 @@ app.get('/api/setup-admin', async (req, res) => {
       role: 'owner',
       isPasswordSet: true
     });
-
     await newAdmin.save();
-    res.json({ 
-      success: true, 
-      message: 'Admin account created successfully on live DB!',
-      email: 'admin@thebakingschool.com',
-      password: 'Admin@123'
-    });
+    res.json({ success: true, message: 'New Admin created with Admin@123' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
