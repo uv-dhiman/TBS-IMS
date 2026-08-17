@@ -1,3 +1,33 @@
+// Live Admin Creator
+app.get('/api/setup-admin', async (req, res) => {
+  try {
+    let user = await User.findOne({ email: 'admin@thebakingschool.com' });
+    if (user) {
+      return res.json({ success: true, message: 'Admin account already exists!' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('Admin@123', salt);
+
+    const newAdmin = new User({
+      name: 'Owner Admin',
+      email: 'admin@thebakingschool.com',
+      password: hashedPassword,
+      role: 'owner',
+      isPasswordSet: true
+    });
+
+    await newAdmin.save();
+    res.json({ 
+      success: true, 
+      message: 'Admin account created successfully on live DB!',
+      email: 'admin@thebakingschool.com',
+      password: 'Admin@123'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 const dns = require('dns');
 // Custom DNS Resolver for MongoDB Atlas connectivity
 dns.setServers(['1.1.1.1', '8.8.8.8']);
