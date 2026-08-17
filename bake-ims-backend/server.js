@@ -68,12 +68,54 @@ app.post('/api/auth/login', handleLogin);
 app.post('/api/login', handleLogin);
 
 // 3. Student Routes
+// GET Students - ensure clean array & total count support
 app.get('/api/students', async (req, res) => {
   try {
     const students = await Student.find().sort({ createdAt: -1 });
-    res.json(students);
+    res.json({
+      success: true,
+      count: students.length,
+      students: students,
+      data: students
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message, students: [] });
+  }
+});
+
+// POST Student - Clean unified response
+app.post('/api/students', async (req, res) => {
+  try {
+    const data = req.body;
+    const studentName = data.name || data.fullName || data.studentName;
+    const studentEmail = (data.email || data.emailAddress || '').toLowerCase().trim();
+    const studentPhone = data.phone || data.phoneNumber || '';
+    const studentCourse = data.course || data.courseName || 'Diploma in Pastry & Baking';
+    const total = Number(data.totalFee || data.courseFee || 0);
+    const paid = Number(data.initialPaidAmount || data.paidFee || 0);
+
+    const newStudent = new Student({
+      name: studentName,
+      email: studentEmail,
+      phone: studentPhone,
+      course: studentCourse,
+      totalFee: total,
+      paidFee: paid,
+      dueFee: total - paid
+    });
+
+    const saved = await newStudent.save();
+
+    // Send both direct object & wrapper to satisfy any frontend condition
+    res.status(201).json({
+      success: true,
+      message: 'Student admitted successfully',
+      student: saved,
+      ...saved.toObject()
+    });
+  } catch (err) {
+    console.error('Admission Error:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
