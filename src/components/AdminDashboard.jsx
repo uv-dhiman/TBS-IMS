@@ -137,7 +137,12 @@ const AdminDashboard = ({ currentUser, onLogout }) => {
             />
           </div>
 
-         
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', padding: '6px 12px', borderRadius: '20px', border: '1px solid #e2e8f0', fontSize: '13px', color: '#475569' }}>
+              <span>⛅ 28°C</span>
+              <span style={{ color: '#94a3b8' }}></span>
+            </div>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#0f172a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px' }}>S</div>
               <div>
