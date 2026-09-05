@@ -10,7 +10,7 @@ require('dotenv').config();
 
 const app = express();
 
-// CORS Bypass
+// CORS Handling
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -22,7 +22,7 @@ app.use((req, res, next) => {
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-// Models (Existing files import)
+// Models
 const User = require('./models/User');
 const Student = require('./models/Student');
 const Inventory = require('./models/Inventory');
@@ -37,7 +37,7 @@ mongoose.connect(MONGO_URI)
 // 1. Health Route
 app.get('/', (req, res) => res.json({ message: 'TBS IMS Live' }));
 
-// 2. Auth / Login Route
+// 2. Auth / Login Route (Supports Admin, Staff, and Students)
 const handleLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -68,7 +68,7 @@ app.post('/api/auth/login', handleLogin);
 app.post('/api/login', handleLogin);
 
 // 3. Student Routes
-// GET Students - ensure clean array & total count support
+// GET Students
 app.get('/api/students', async (req, res) => {
   try {
     const students = await Student.find().sort({ createdAt: -1 });
@@ -83,53 +83,39 @@ app.get('/api/students', async (req, res) => {
   }
 });
 
-// POST Student - Clean unified response
-app.post('/api/students', async (req, res) => {
+// GET Single Student Profile (For Student Portal)
+app.get('/api/students/profile', async (req, res) => {
   try {
-    const data = req.body;
-    const studentName = data.name || data.fullName || data.studentName;
-    const studentEmail = (data.email || data.emailAddress || '').toLowerCase().trim();
-    const studentPhone = data.phone || data.phoneNumber || '';
-    const studentCourse = data.course || data.courseName || 'Diploma in Pastry & Baking';
-    const total = Number(data.totalFee || data.courseFee || 0);
-    const paid = Number(data.initialPaidAmount || data.paidFee || 0);
+    const email = req.query.email?.toLowerCase().trim();
+    if (!email) return res.status(400).json({ message: 'Email required' });
 
-    const newStudent = new Student({
-      name: studentName,
-      email: studentEmail,
-      phone: studentPhone,
-      course: studentCourse,
-      totalFee: total,
-      paidFee: paid,
-      dueFee: total - paid
-    });
+    const student = await Student.findOne({ email });
+    if (!student) return res.status(404).json({ message: 'Student details not found' });
 
-    const saved = await newStudent.save();
-
-    // Send both direct object & wrapper to satisfy any frontend condition
-    res.status(201).json({
-      success: true,
-      message: 'Student admitted successfully',
-      student: saved,
-      ...saved.toObject()
-    });
+    res.json(student);
   } catch (err) {
-    console.error('Admission Error:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
+// POST Student Admission + Auto-Create Student Login Account
 app.post('/api/students', async (req, res) => {
   try {
-    const { name, email, phone, course, totalFee, initialPaidAmount, paidFee } = req.body;
-    // Check if student already exists with same email or phone
-    const existing = await Student.findOne({ $or: [{ email: email.toLowerCase().trim() }, { phone }] });
+    const data = req.body;
+    const name = data.name || data.fullName || data.studentName;
+    const email = (data.email || data.emailAddress || '').toLowerCase().trim();
+    const phone = (data.phone || data.phoneNumber || '').toString().trim();
+    const course = data.course || data.courseName || 'Diploma in Pastry & Baking';
+    const total = Number(data.totalFee || data.courseFee || 0);
+    const paid = Number(data.initialPaidAmount || data.paidFee || 0);
+
+    // Prevent duplicates
+    const existing = await Student.findOne({ $or: [{ email }, { phone }] });
     if (existing) {
       return res.status(400).json({ message: 'Student with this email or phone is already registered!' });
     }
-    const total = Number(totalFee) || 0;
-    const paid = Number(initialPaidAmount || paidFee) || 0;
 
+    // 1. Create Student Admission Record
     const newStudent = new Student({
       name,
       email,
@@ -139,14 +125,35 @@ app.post('/api/students', async (req, res) => {
       paidFee: paid,
       dueFee: total - paid
     });
+    const savedStudent = await newStudent.save();
 
-    const saved = await newStudent.save();
-    res.status(201).json(saved);
+    // 2. Auto-create student login in User collection (Default Password = Phone Number)
+    const existingUser = await User.findOne({ email });
+    if (!existingUser) {
+      const defaultPassword = phone || 'Baking@123';
+      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+      const studentUser = new User({
+        name,
+        email,
+        password: hashedPassword,
+        role: 'student'
+      });
+      await studentUser.save();
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Student admitted and login generated',
+      student: savedStudent,
+      ...savedStudent.toObject()
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Error submitting admission', error: err.message });
+    console.error('Admission Error:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
+// Fee Collection Route
 app.put('/api/students/:id/fee', async (req, res) => {
   try {
     const { additionalAmount } = req.body;
